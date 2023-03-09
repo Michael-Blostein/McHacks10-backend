@@ -1,12 +1,12 @@
-from flask_cors import CORS
+from flask_cors import CORS #allow cross origin on the frontend because basically not every backend allows anybody to call them
 import requests
-from flask import Flask, flash, request, jsonify, make_response
-from decouple import config
+from flask import Flask, flash, request, jsonify, make_response #flask is for creating our own API
+from decouple import config #to get values inside our .env file which are our credentials
 import io
 import os
 import json
-from google.cloud import vision
-from werkzeug.utils import secure_filename
+from google.cloud import vision #to use the functions inside the google cloud api
+from werkzeug.utils import secure_filename #validate the filename
 
 
 UPLOAD_FOLDER = 'Images'
@@ -19,17 +19,27 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Imports the Google Cloud client library
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'cred.json'
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}) #sets the CORS to all origins are accepted
 
-def allowed_file(filename):
+#to check filename and check if its in the ALLOWED_EXTENSIONS above
+def allowed_file(filename): 
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+#this is our own first API url using flask
+
+
 
 @app.route('/')
 def hello_world():
     return 'Hello from Flask!'
 
-
+#when a person does /search
+#it will take the file object that is sent through that request
+#check if file is allowed then save the file inside the images folder
+#then calls the google cloud api to read what are the labels and search each label through the calorie ninja API
+#and return the labels info
 @app.route('/search', methods=['POST'])
 def searchCommand():
     file = request.files.get('file', None)
@@ -59,21 +69,23 @@ def searchCommand():
             #             print(line)
             #             labels.append(json.loads(food))
             #             break
-
-
     return jsonify(labels)
 
 
+
+#called in the API function above to use the calorie ninja url, add our key and if the response is ok, then it will return the data, or else it will print an error
 def SearchCalorieNinja(query):
     api_url = 'https://api.calorieninjas.com/v1/nutrition?query='
     response = requests.get(api_url + query, headers={'X-Api-Key': config('CalorieNinja')})
     if response.status_code == requests.codes.ok:
-        # print(response.text)
         return(response.text)
     else:
         print("Error:", response.status_code, response.text)
 
-
+        
+        
+       
+#read label, open the image in the specified path, then send it to google vision and return the list of labels
 def ReadLabel(path):
     # Instantiates a client
     client = vision.ImageAnnotatorClient()
